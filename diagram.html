@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure Billing Records Cost Optimization Architecture</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .subtitle {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.2em;
+        }
+
+        .architecture {
+            padding: 40px;
+            position: relative;
+            background: #f8f9fa;
+        }
+
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .layer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .component {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            min-width: 200px;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        .component:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+
+        .component.client { border-color: #28a745; }
+        .component.gateway { border-color: #17a2b8; }
+        .component.hot-storage { border-color: #fd7e14; }
+        .component.cold-storage { border-color: #6f42c1; }
+        .component.processing { border-color: #dc3545; }
+
+        .component-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .client .component-icon { color: #28a745; }
+        .gateway .component-icon { color: #17a2b8; }
+        .hot-storage .component-icon { color: #fd7e14; }
+        .cold-storage .component-icon { color: #6f42c1; }
+        .processing .component-icon { color: #dc3545; }
+
+        .component h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 1.3em;
+        }
+
+        .component p {
+            margin: 5px 0;
+            color: #6c757d;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .flow-arrow {
+            font-size: 2em;
+            color: #007bff;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .data-flow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 40px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .flow-step {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 25px;
+            font-weight: 600;
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .flow-connector {
+            flex: 1;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            margin: 0 15px;
+            position: relative;
+        }
+
+        .flow-connector::after {
+            content: '▶';
+            position: absolute;
+            right: -10px;
+            top: -8px;
+            color: #764ba2;
+            font-size: 1.2em;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            border-left: 5px solid #007bff;
+        }
+
+        .metric-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #007bff;
+            margin: 10px 0;
+        }
+
+        .metric-label {
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+
+        .cost-comparison {
+            display: flex;
+            justify-content: space-around;
+            margin: 40px 0;
+            gap: 20px;
+        }
+
+        .cost-box {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            flex: 1;
+        }
+
+        .cost-box.before {
+            border-top: 5px solid #dc3545;
+        }
+
+        .cost-box.after {
+            border-top: 5px solid #28a745;
+        }
+
+        .cost-amount {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .before .cost-amount { color: #dc3545; }
+        .after .cost-amount { color: #28a745; }
+
+        .savings {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .tech-stack {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .tech-badge {
+            background: #0078d4;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .layer {
+                flex-direction: column;
+            }
+            
+            .data-flow {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .flow-connector {
+                width: 3px;
+                height: 30px;
+                margin: 10px 0;
+            }
+            
+            .flow-connector::after {
+                content: '▼';
+                top: 25px;
+                right: -8px;
+            }
+            
+            .cost-comparison {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Azure Billing Records Cost Optimization</h1>
+            <div class="subtitle">Tiered Storage Architecture with Automated Archival</div>
+        </div>
+
+        <div class="architecture">
+            <div class="flow-container">
+                <!-- Client Layer -->
+                <div class="layer">
+                    <div class="component client">
+                        <div class="component-icon">👥</div>
+                        <h3>Client Applications</h3>
+                        <p>Existing applications</p>
+                        <p>No code changes required</p>
+                        <p>Same API endpoints</p>
+                    </div>
+                </div>
+
+                <div class="flow-arrow">⬇️</div>
+
+                <!-- API Gateway Layer -->
+                <div class="layer">
+                    <div class="component gateway">
+                        <div class="component-icon">🌐</div>
+                        <h3>Azure API Management</h3>
+                        <p>Unified API interface</p>
+                        <p>Request routing</p>
+                        <p>Caching & monitoring</p>
+                    </div>
+                </div>
+
+                <div class="flow-arrow">⬇️</div>
+
+                <!-- Processing Layer -->
+                <div class="layer">
+                    <div class="component processing">
+                        <div class="component-icon">⚡</div>
+                        <h3>Azure Functions</h3>
+                        <p>Smart retrieval logic</p>
+                        <p>Hot/Cold tier routing</p>
+                        <p>Write operations</p>
+                    </div>
+                </div>
+
+                <div class="flow-arrow">⬇️</div>
+
+                <!-- Storage Layer -->
+                <div class="layer">
+                    <div class="component hot-storage">
+                        <div class="component-icon">🔥</div>
+                        <h3>Cosmos DB (Hot)</h3>
+                        <p>Records ≤ 3 months</p>
+                        <p>~500K records</p>
+                        <p>Sub-second access</p>
+                    </div>
+
+                    <div class="component cold-storage">
+                        <div class="component-icon">❄️</div>
+                        <h3>Blob Storage (Cold)</h3>
+                        <p>Records > 3 months</p>
+                        <p>~1.5M records</p>
+                        <p>2-3 second access</p>
+                    </div>
+                </div>
+
+                <div class="flow-arrow">⬇️</div>
+
+                <!-- Automation Layer -->
+                <div class="layer">
+                    <div class="component processing">
+                        <div class="component-icon">🤖</div>
+                        <h3>Automated Archival</h3>
+                        <p>Daily scheduled process</p>
+                        <p>Seamless data migration</p>
+                        <p>Metadata tracking</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Flow Process -->
+            <div class="data-flow">
+                <div class="flow-step">Read Request</div>
+                <div class="flow-connector"></div>
+                <div class="flow-step">Check Hot Storage</div>
+                <div class="flow-connector"></div>
+                <div class="flow-step">Fallback to Cold</div>
+                <div class="flow-connector"></div>
+                <div class="flow-step">Return Data</div>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="metrics">
+                <div class="metric-card">
+                    <div class="metric-value">2M+</div>
+                    <div class="metric-label">Total Records</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">300KB</div>
+                    <div class="metric-label">Max Record Size</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">&lt; 3s</div>
+                    <div class="metric-label">Cold Storage Access</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">0%</div>
+                    <div class="metric-label">Data Loss Risk</div>
+                </div>
+            </div>
+
+            <!-- Cost Comparison -->
+            <div class="cost-comparison">
+                <div class="cost-box before">
+                    <h3>Current Monthly Cost</h3>
+                    <div class="cost-amount">$208</div>
+                    <p>Full Cosmos DB storage</p>
+                    <p>All 2M records in hot tier</p>
+                </div>
+                <div class="cost-box after">
+                    <h3>Optimized Monthly Cost</h3>
+                    <div class="cost-amount">$68</div>
+                    <p>Tiered storage approach</p>
+                    <p>75% of data in cold tier</p>
+                </div>
+            </div>
+
+            <div class="savings">
+                💰 Total Monthly Savings: $140 (67% reduction)
+            </div>
+
+            <!-- Technology Stack -->
+            <div class="tech-stack">
+                <div class="tech-badge">Azure Cosmos DB</div>
+                <div class="tech-badge">Azure Blob Storage</div>
+                <div class="tech-badge">Azure Functions</div>
+                <div class="tech-badge">Azure API Management</div>
+                <div class="tech-badge">Azure Logic Apps</div>
+                <div class="tech-badge">Azure Monitor</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactive elements
+        document.querySelectorAll('.component').forEach(component => {
+            component.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-8px) scale(1.02)';
+            });
+            
+            component.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+
+        // Animate metrics on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animation = 'fadeInUp 0.6s ease forwards';
+                }
+            });
+        });
+
+        document.querySelectorAll('.metric-card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Add CSS for animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
