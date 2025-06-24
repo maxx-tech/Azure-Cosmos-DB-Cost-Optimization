@@ -22,3 +22,7 @@ Scalability: Automatic archival handles growing data volumes
 Compliance: All data retained and accessible
 Zero Downtime: Seamless migration without service interruption
 API Compatibility: No changes to existing client applications
+
+
+Azure Cost Optimization Architecture Diagram
+https://claude.ai/public/artifacts/d2c0ac86-56d4-4a2f-b45c-2bea0470ac57
